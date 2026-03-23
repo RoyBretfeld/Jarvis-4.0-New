@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="de"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Die Intelligente Schicht - RAG Ökosystem</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary": "#8895ff",
+              "on-secondary-fixed-variant": "#006a3a",
+              "surface-container-high": "#141f38",
+              "primary": "#78b0ff",
+              "background": "#060e20",
+              "primary-fixed": "#5ba2ff",
+              "on-tertiary-container": "#000000",
+              "surface-variant": "#192540",
+              "on-secondary-fixed": "#004a27",
+              "on-tertiary-container": "#000000",
+              "on-tertiary": "#000e6e",
+              "on-error-container": "#ffa8a3",
+              "surface-tint": "#78b0ff",
+              "secondary-container": "#006d3c",
+              "tertiary-container": "#6677f9",
+              "primary-fixed-dim": "#3594ff",
+              "tertiary-fixed": "#a0aaff",
+              "tertiary-dim": "#5667e8",
+              "error-dim": "#d7383b",
+              "on-tertiary-fixed-variant": "#0a21ab",
+              "surface-dim": "#060e20",
+              "on-primary": "#002f5c",
+              "secondary-dim": "#61ee9a",
+              "surface-container-lowest": "#000000",
+              "surface-container-highest": "#192540",
+              "secondary": "#70fda7",
+              "on-secondary-container": "#e2ffe6",
+              "on-surface-variant": "#a3aac4",
+              "error": "#ff716c",
+              "on-background": "#dee5ff",
+              "on-primary-fixed-variant": "#002c58",
+              "primary-container": "#5ba2ff",
+              "tertiary-fixed-dim": "#8f9bff",
+              "on-secondary": "#005f33",
+              "on-error": "#490006",
+              "surface-container-low": "#091328",
+              "error-container": "#9f0519",
+              "outline": "#6d758c",
+              "inverse-surface": "#faf8ff",
+              "secondary-fixed-dim": "#61ee9a",
+              "inverse-primary": "#005fb1",
+              "outline-variant": "#40485d",
+              "on-primary-fixed": "#000000",
+              "secondary-fixed": "#70fda7",
+              "on-surface": "#dee5ff",
+              "on-tertiary-fixed": "#000958",
+              "inverse-on-surface": "#4d556b",
+              "primary-dim": "#549fff",
+              "surface": "#060e20",
+              "surface-container": "#0f1930",
+              "surface-bright": "#1f2b49"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(25, 37, 64, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #40485d;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 selection:text-primary min-h-screen">
+<!-- TopNavBar -->
+<nav class="bg-[#060e20] text-[#78b0ff] font-['Inter'] antialiased tracking-tight docked full-width top-0 z-50 border-b border-[#40485d]/20 shadow-none flex justify-between items-center w-full px-6 py-3 fixed">
+<div class="text-xl font-bold tracking-tighter text-[#dee5ff]">
+            Die Intelligente Schicht
+        </div>
+<div class="flex items-center gap-8">
+<div class="hidden md:flex items-center gap-6">
+<a class="text-[#78b0ff] font-semibold hover:text-[#dee5ff] transition-colors duration-200" href="#">Explorer</a>
+<a class="text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200" href="#">Abfrage</a>
+<a class="text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200" href="#">Verarbeitung</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#a3aac4] hover:text-[#dee5ff] cursor-pointer active:scale-95 transition-transform">settings</span>
+<span class="material-symbols-outlined text-[#a3aac4] hover:text-[#dee5ff] cursor-pointer active:scale-95 transition-transform">notifications</span>
+<span class="material-symbols-outlined text-[#a3aac4] hover:text-[#dee5ff] cursor-pointer active:scale-95 transition-transform">account_circle</span>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="bg-[#091328] font-['Inter'] text-sm font-medium h-screen w-64 fixed left-0 top-0 border-r border-[#40485d]/10 shadow-2xl shadow-black/20 flex flex-col pt-20 pb-6 z-40">
+<div class="px-6 mb-8">
+<h2 class="text-lg font-black text-[#dee5ff]">RAG Ökosystem</h2>
+<p class="text-[10px] text-secondary tracking-widest uppercase opacity-80">AKTIVE KNOTEN: 12</p>
+</div>
+<div class="flex-1 space-y-1">
+<div class="flex items-center gap-3 px-6 py-3 text-[#70fda7] border-r-2 border-[#70fda7] bg-gradient-to-r from-[#78b0ff]/10 to-transparent cursor-pointer duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+                Explorer
+            </div>
+<div class="flex items-center gap-3 px-6 py-3 text-[#a3aac4] hover:bg-[#0f1930] hover:text-[#dee5ff] cursor-pointer transition-all duration-150">
+<span class="material-symbols-outlined">database</span>
+                Abfrage
+            </div>
+<div class="flex items-center gap-3 px-6 py-3 text-[#a3aac4] hover:bg-[#0f1930] hover:text-[#dee5ff] cursor-pointer transition-all duration-150">
+<span class="material-symbols-outlined">language</span>
+                Scraping
+            </div>
+<div class="flex items-center gap-3 px-6 py-3 text-[#a3aac4] hover:bg-[#0f1930] hover:text-[#dee5ff] cursor-pointer transition-all duration-150">
+<span class="material-symbols-outlined">memory</span>
+                Verarbeitung
+            </div>
+<div class="flex items-center gap-3 px-6 py-3 text-[#a3aac4] hover:bg-[#0f1930] hover:text-[#dee5ff] cursor-pointer transition-all duration-150">
+<span class="material-symbols-outlined">settings</span>
+                Einstellungen
+            </div>
+</div>
+<div class="px-4 mt-auto">
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-2.5 rounded-xl shadow-lg shadow-primary/10 active:scale-95 transition-all">
+                Neue Abfrage
+            </button>
+<div class="mt-6 space-y-1 border-t border-outline-variant/10 pt-4">
+<div class="flex items-center gap-3 px-2 py-2 text-[#a3aac4] hover:text-[#dee5ff] cursor-pointer transition-all text-xs">
+<span class="material-symbols-outlined text-sm">help</span>
+                    Support
+                </div>
+<div class="flex items-center gap-3 px-2 py-2 text-[#a3aac4] hover:text-[#dee5ff] cursor-pointer transition-all text-xs">
+<span class="material-symbols-outlined text-sm">terminal</span>
+                    Protokolle
+                </div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pl-64 pt-20 p-6 min-h-screen grid grid-cols-12 gap-6 items-stretch">
+<!-- 1. Left Card: File Explorer and Uploader -->
+<section class="col-span-3 bg-surface-container-low rounded-xl flex flex-col overflow-hidden border border-outline-variant/5">
+<div class="p-5 border-b border-outline-variant/10">
+<h3 class="font-bold text-on-surface">Wissensressourcen</h3>
+<p class="text-xs text-on-surface-variant">Vektorquellen verwalten</p>
+</div>
+<div class="flex-1 p-5 overflow-y-auto space-y-4">
+<!-- Dropzone -->
+<div class="border-2 border-dashed border-outline-variant/30 rounded-xl p-8 text-center bg-surface-container transition-all hover:border-primary/50 group cursor-pointer">
+<span class="material-symbols-outlined text-4xl text-outline-variant group-hover:text-primary transition-colors">cloud_upload</span>
+<p class="text-xs font-medium mt-3 text-on-surface-variant group-hover:text-on-surface">PDF oder Ordner hierher ziehen</p>
+<p class="text-[10px] text-outline mt-1 italic">Bis zu 200MB / Datei</p>
+</div>
+<!-- Explorer List -->
+<div class="space-y-2 pt-4">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-surface-container-highest/50 hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-xl">folder</span>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-medium truncate">Legal_Docs_2024</p>
+<p class="text-[10px] text-on-surface-variant">12 Elemente • 45.2 MB</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm opacity-0 group-hover:opacity-100">more_vert</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-error-dim text-xl">picture_as_pdf</span>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-medium truncate">quarterly_report_Q3.pdf</p>
+<p class="text-[10px] text-on-surface-variant">3.4 MB</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm opacity-0 group-hover:opacity-100">more_vert</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-tertiary text-xl">table_chart</span>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-medium truncate">financial_ledger.csv</p>
+<p class="text-[10px] text-on-surface-variant">12.1 MB</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-sm opacity-0 group-hover:opacity-100">more_vert</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-highest/30 border-t border-outline-variant/10">
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">SPEICHERLIMIT</span>
+<span class="text-[10px] text-primary">64% Belegt</span>
+</div>
+<div class="h-1 w-full bg-outline-variant/20 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[64%]"></div>
+</div>
+</div>
+</section>
+<div class="col-span-9 flex flex-col gap-6">
+<!-- Top Row: Center & Right Cards -->
+<div class="grid grid-cols-12 gap-6 h-1/2 min-h-[400px]">
+<!-- 2. Center Card: Data Processing Table -->
+<section class="col-span-8 bg-surface-container rounded-xl overflow-hidden border border-outline-variant/5 flex flex-col shadow-lg shadow-black/10">
+<div class="px-6 py-5 flex justify-between items-center bg-surface-container-highest/20">
+<h3 class="font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">dataset</span>
+                            Verarbeitungs-Pipeline
+                        </h3>
+<div class="flex gap-2">
+<button class="text-[10px] px-3 py-1 bg-surface-container-high rounded-full border border-outline-variant/20 text-on-surface-variant hover:text-on-surface transition-colors">Aktualisieren</button>
+<button class="text-[10px] px-3 py-1 bg-primary/10 text-primary font-bold rounded-full hover:bg-primary hover:text-on-primary transition-all">Stapelverarbeitung</button>
+</div>
+</div>
+<div class="flex-1 overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low/50 sticky top-0">
+<tr>
+<th class="px-6 py-3 text-[10px] font-black text-outline uppercase tracking-widest">DATEINAME</th>
+<th class="px-6 py-3 text-[10px] font-black text-outline uppercase tracking-widest">TYP</th>
+<th class="px-6 py-3 text-[10px] font-black text-outline uppercase tracking-widest text-right">GRÖSSE</th>
+<th class="px-6 py-3 text-[10px] font-black text-outline uppercase tracking-widest">METHODE</th>
+<th class="px-6 py-3 text-[10px] font-black text-outline uppercase tracking-widest text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-variant/40 transition-colors">
+<td class="px-6 py-4 text-xs font-semibold">compliance_v2.pdf</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] text-tertiary">DOCUMENT</span>
+</td>
+<td class="px-6 py-4 text-xs text-right text-on-surface-variant tabular-nums">1.2 MB</td>
+<td class="px-6 py-4">
+<select class="bg-surface-container-lowest border-none text-[10px] rounded p-1 focus:ring-1 focus:ring-primary w-24">
+<option>LLM Engine</option>
+<option>VLM Vision</option>
+<option>SQL Parser</option>
+</select>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-block w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/40 transition-colors">
+<td class="px-6 py-4 text-xs font-semibold">factory_blueprints.png</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] text-primary">IMAGE</span>
+</td>
+<td class="px-6 py-4 text-xs text-right text-on-surface-variant tabular-nums">24.8 MB</td>
+<td class="px-6 py-4">
+<span class="text-[10px] text-secondary font-bold">VLM VISION</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-secondary text-base">check_circle</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-variant/40 transition-colors">
+<td class="px-6 py-4 text-xs font-semibold">user_telemetry.sqlite</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-[10px] text-tertiary">DATABASE</span>
+</td>
+<td class="px-6 py-4 text-xs text-right text-on-surface-variant tabular-nums">115.0 MB</td>
+<td class="px-6 py-4">
+<span class="text-[10px] text-tertiary font-bold uppercase tracking-tight">SQL Parser</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-error text-base">error</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- 3. Right Card: Hybrid System Monitor -->
+<section class="col-span-4 bg-surface-container-highest/40 rounded-xl p-6 border border-primary/10 flex flex-col shadow-2xl shadow-primary/5">
+<h3 class="text-xs font-black text-on-surface-variant uppercase tracking-widest mb-6">Neuronaler Controller</h3>
+<div class="flex-1 space-y-6">
+<!-- Active Model Indicators -->
+<div class="p-4 rounded-xl glass-panel border border-primary/20 relative overflow-hidden group">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex justify-between items-center relative z-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">neurology</span>
+</div>
+<div>
+<p class="text-xs font-bold">LLM Aktiv</p>
+<p class="text-[10px] text-on-surface-variant">GPT-4o-Turbo-v2</p>
+</div>
+</div>
+<div class="flex gap-1">
+<div class="w-1 h-3 bg-secondary rounded-full animate-bounce"></div>
+<div class="w-1 h-5 bg-secondary rounded-full animate-bounce [animation-delay:0.2s]"></div>
+<div class="w-1 h-4 bg-secondary rounded-full animate-bounce [animation-delay:0.4s]"></div>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10 opacity-60 grayscale group hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">visibility</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant">VLM Leerlauf</p>
+<p class="text-[10px] text-outline">Claude-3-Vision</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant">power_settings_new</span>
+</div>
+</div>
+<!-- System Health Stats -->
+<div class="grid grid-cols-2 gap-4 mt-auto">
+<div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<p class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">LATENZ</p>
+<p class="text-lg font-black text-secondary">214<span class="text-[10px] ml-1 font-medium">ms</span></p>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<p class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">TOKEN/SEK</p>
+<p class="text-lg font-black text-primary">82<span class="text-[10px] ml-1 font-medium">tk</span></p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- 4. Bottom Card: Web Scraper Interface -->
+<section class="flex-1 bg-surface-container-low rounded-xl border border-outline-variant/10 overflow-hidden flex flex-col shadow-inner">
+<div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-low">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary">language</span>
+<h3 class="text-sm font-bold text-on-surface">Universelle Crawler-Engine</h3>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">CRAWLER-TIEFE</span>
+<div class="flex bg-surface-container-highest p-0.5 rounded-full border border-outline-variant/20">
+<button class="px-3 py-1 text-[10px] bg-primary text-on-primary font-bold rounded-full shadow-md">1</button>
+<button class="px-3 py-1 text-[10px] text-on-surface-variant hover:text-on-surface">2</button>
+<button class="px-3 py-1 text-[10px] text-on-surface-variant hover:text-on-surface">MAX</button>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col flex-1 min-h-0">
+<!-- Controls Section -->
+<div class="p-6 space-y-6">
+<div class="w-full">
+<label class="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Ziel-URL</label>
+<input class="w-full bg-surface-container-highest border-none text-xs rounded-xl py-3 px-4 focus:ring-1 focus:ring-primary placeholder:text-outline/50" placeholder="https://docs.ai-stratum.io/api/v1" type="text"/>
+</div>
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<span class="text-xs text-on-surface-variant">Cross-Origin folgen</span>
+<div class="w-8 h-4 bg-outline-variant/20 rounded-full relative cursor-pointer">
+<div class="absolute left-1 top-1 w-2 h-2 bg-outline rounded-full"></div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-on-surface-variant">Bild-Alt-Tags parsen</span>
+<div class="w-8 h-4 bg-primary/20 rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-2 h-2 bg-primary rounded-full"></div>
+</div>
+</div>
+<button class="ml-auto flex items-center gap-2 bg-gradient-to-br from-tertiary to-tertiary-container text-on-tertiary-container font-black px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-tertiary/20 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-xl">play_arrow</span>
+                        CRAWLER STARTEN
+                    </button>
+</div>
+</div>
+<!-- Streaming Logs View (Now spans full width at the bottom) -->
+<div class="flex-1 bg-surface-container-lowest/50 flex flex-col border-t border-outline-variant/10">
+<div class="px-4 py-2 border-b border-outline-variant/5 flex justify-between bg-surface-container-low/30">
+<span class="text-[9px] font-black text-on-surface-variant uppercase tracking-tighter">CHROMA DB AUFNAHME-PROTOKOLLE</span>
+<span class="text-[9px] text-secondary tabular-nums">LIVE-STREAMING: 24.5 KB/s</span>
+</div>
+<div class="flex-1 p-4 font-mono text-[10px] overflow-y-auto space-y-1 text-on-surface-variant min-h-[150px]">
+<p><span class="text-outline">[14:22:01]</span> <span class="text-primary">INITIALISIERUNG</span> crawler_node_04...</p>
+<p><span class="text-outline">[14:22:02]</span> <span class="text-secondary">ERFOLG</span> connected to gateway https://docs.ai-stratum.io</p>
+<p><span class="text-outline">[14:22:02]</span> <span class="text-tertiary">PARSING</span> root index (size: 42.1kb)</p>
+<p><span class="text-outline">[14:22:03]</span> <span class="text-primary">EXTRAKTION</span> 12 child links found...</p>
+<p><span class="text-outline">[14:22:05]</span> <span class="text-on-surface">EMBEDDING</span> vector_id_88291 -&gt; ChromaDB_Shard_A</p>
+<p><span class="text-outline">[14:22:06]</span> <span class="text-on-surface">EMBEDDING</span> vector_id_88292 -&gt; ChromaDB_Shard_A</p>
+<p><span class="text-outline">[14:22:07]</span> <span class="text-error">WARNUNG</span> 403 Forbidden on /admin/config - skipping</p>
+<p><span class="text-outline">[14:22:08]</span> <span class="text-secondary">ERFOLG</span> 4 items added to collection: 'technical_manual'</p>
+<div class="w-1 h-3 bg-primary animate-pulse inline-block ml-1"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Visual Layering Decor (Ambient Illumination) -->
+<div class="fixed top-1/4 right-0 w-96 h-96 bg-primary/5 blur-[120px] pointer-events-none -z-10"></div>
+<div class="fixed bottom-0 left-1/4 w-[500px] h-[300px] bg-tertiary/5 blur-[150px] pointer-events-none -z-10"></div>
+</body></html>

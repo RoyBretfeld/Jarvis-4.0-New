@@ -1,0 +1,145 @@
+# JARVIS 4.0 – Container Orchestration
+# Strategie: Jarvis_Container_Orchestration_Strategie.md
+# Hardware: AMD Ryzen 9 7950X (32 Threads / 16 Kerne)
+
+networks:
+  jarvis-internal:
+    driver: bridge
+    internal: true
+  jarvis-external:
+    driver: bridge
+
+volumes:
+  rag-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH}/rag
+  rag-cache:
+
+services:
+
+  # ─────────────────────────────────────────────
+  # THE BRAIN – UI, API-Routing, Chat-Logik
+  # ─────────────────────────────────────────────
+  jarvis-core:
+    build: ./docker/core
+    container_name: jarvis-core
+    restart: unless-stopped
+    cpuset: "0-1"
+    mem_limit: 4g
+    networks:
+      - jarvis-internal
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - jarvis-rag
+      - jarvis-gateway
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────
+  # THE MEMORY – Qdrant/ChromaDB + Embeddings
+  # ─────────────────────────────────────────────
+  jarvis-rag:
+    build: ./docker/rag
+    container_name: jarvis-rag
+    restart: unless-stopped
+    cpuset: "4-7"
+    mem_limit: 8g
+    networks:
+      - jarvis-internal
+    ports:
+      - "8766:8766"
+    volumes:
+      - rag-data:/app/data
+      - rag-cache:/app/cache
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8766/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────
+  # THE BORDER – Privacy-Filter, Cloud-Gateway
+  # ─────────────────────────────────────────────
+  jarvis-gateway:
+    build: ./docker/gateway
+    container_name: jarvis-gateway
+    restart: unless-stopped
+    cpuset: "2-3"
+    mem_limit: 2g
+    networks:
+      - jarvis-internal
+      - jarvis-external
+    ports:
+      - "8767:8767"
+    environment:
+      - DOCKER_SUBNET=${DOCKER_SUBNET:-172.20.0.0/16}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8767/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─────────────────────────────────────────────
+  # THE WORKSHOP – OpenShell Sandbox für Agenten
+  # ─────────────────────────────────────────────
+  jarvis-sandbox:
+    build: ./docker/sandbox
+    container_name: jarvis-sandbox
+    restart: "no"
+    cpuset: "8-15"
+    mem_limit: 16g
+    networks:
+      - jarvis-internal
+    volumes:
+      - ./src:/workspace/src:ro
+      - ./tests:/workspace/tests
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "print('sandbox-ok')"]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

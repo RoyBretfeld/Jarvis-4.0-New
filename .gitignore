@@ -1,0 +1,27 @@
+# env
+.env
+.env.*
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# node
+node_modules/
+
+# dumps
+PROJECT_CONTEXT_DUMP_*.txt
+.rb_dumps/
+
+# db dumps
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# data / models
+models/
+logs/

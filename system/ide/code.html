@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MONACO IDE - Project Alpha</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error": "#ffb4ab",
+                        "tertiary": "#00e639",
+                        "surface-container-lowest": "#080f18",
+                        "on-primary-container": "#00285b",
+                        "secondary-fixed": "#d6e3ff",
+                        "surface-tint": "#adc7ff",
+                        "inverse-surface": "#dce3f0",
+                        "secondary-container": "#3c4962",
+                        "surface-container-low": "#151c26",
+                        "primary-fixed": "#d8e2ff",
+                        "background": "#0d141d",
+                        "surface-bright": "#333a44",
+                        "on-secondary-container": "#abb9d6",
+                        "on-tertiary": "#003907",
+                        "on-surface": "#dce3f0",
+                        "surface-container": "#19202a",
+                        "surface-dim": "#0d141d",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "surface": "#0d141d",
+                        "surface-container-high": "#242a34",
+                        "inverse-on-surface": "#2a313b",
+                        "on-tertiary-container": "#003205",
+                        "on-primary-fixed": "#001a41",
+                        "surface-variant": "#2e353f",
+                        "tertiary-fixed": "#72ff70",
+                        "on-background": "#dce3f0",
+                        "on-secondary-fixed-variant": "#39475f",
+                        "outline": "#8b90a0",
+                        "on-surface-variant": "#c1c6d7",
+                        "surface-container-highest": "#2e353f",
+                        "on-primary": "#002e68",
+                        "tertiary-container": "#00a827",
+                        "on-primary-fixed-variant": "#004493",
+                        "primary": "#adc7ff",
+                        "tertiary-fixed-dim": "#00e639",
+                        "on-tertiary-fixed": "#002203",
+                        "outline-variant": "#414754",
+                        "on-secondary-fixed": "#0d1c32",
+                        "primary-container": "#4a8eff",
+                        "secondary": "#b9c7e4",
+                        "on-secondary": "#233148",
+                        "primary-fixed-dim": "#adc7ff",
+                        "on-tertiary-fixed-variant": "#00530e",
+                        "inverse-primary": "#005bc0",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#b9c7e4"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"],
+                        "mono": ["Fira Code", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .syntax-keyword { color: #00e6ff; }
+        .syntax-string { color: #ffffff; }
+        .syntax-function { color: #00e639; text-shadow: 0 0 8px rgba(0, 230, 57, 0.4); }
+        .active-line-glow { background: rgba(0, 230, 57, 0.05); border-left: 2px solid #00e639; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2e353f; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #414754; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body h-screen overflow-hidden flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-slate-900 dark:bg-[#0d141d] font-['Space_Grotesk'] tracking-tight text-sm uppercase flex justify-between items-center w-full px-4 h-12 z-50">
+<div class="flex items-center space-x-6">
+<span class="text-lg font-bold text-white tracking-widest">MONACO IDE</span>
+<nav class="hidden md:flex items-center space-x-4">
+<a class="text-[#00e639] border-b-2 border-[#00e639] pb-1 hover:bg-white/10 transition-colors" href="#">File</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Edit</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Selection</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">View</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Go</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Run</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Terminal</a>
+<a class="text-white/70 hover:bg-white/10 transition-colors" href="#">Help</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-white/70 cursor-pointer hover:text-white" data-icon="search">search</span>
+</div>
+<span class="material-symbols-outlined text-white/70 cursor-pointer hover:text-white" data-icon="settings">settings</span>
+<span class="material-symbols-outlined text-white/70 cursor-pointer hover:text-white" data-icon="account_circle">account_circle</span>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-slate-950 dark:bg-[#151c26] flex flex-col items-center py-4 space-y-4 docked h-full left-0 w-16 z-40">
+<div class="flex flex-col items-center space-y-6 w-full">
+<button class="w-full py-3 flex justify-center text-[#00e639] border-l-2 border-[#00e639] shadow-[0_0_8px_rgba(0,230,57,0.3)] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+</button>
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="bug_report">bug_report</span>
+</button>
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="extension">extension</span>
+</button>
+</div>
+<div class="mt-auto flex flex-col items-center space-y-4 w-full">
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</button>
+<button class="w-full py-3 flex justify-center text-slate-400 dark:text-[#c1c6d7] hover:text-white hover:bg-[#242a34] transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="flex-1 flex overflow-hidden">
+<!-- File Explorer / Project Tree -->
+<div class="w-64 bg-[#151c26] hidden lg:flex flex-col border-r border-transparent">
+<div class="p-4 flex justify-between items-center">
+<span class="font-headline text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">EXPLORER: PROJECT_ALPHA</span>
+<span class="material-symbols-outlined text-xs text-on-surface-variant" data-icon="more_horiz">more_horiz</span>
+</div>
+<div class="px-2 space-y-1 overflow-y-auto">
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="expand_more">expand_more</span>
+<span class="text-xs font-medium">src</span>
+</div>
+<div class="pl-6 space-y-1">
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded">
+<span class="material-symbols-outlined text-sm text-tertiary" data-icon="javascript">javascript</span>
+<span class="text-xs">main.js</span>
+</div>
+<div class="flex items-center space-x-2 py-1 px-2 bg-surface-container-high cursor-pointer rounded">
+<span class="material-symbols-outlined text-sm text-primary-container" data-icon="database">database</span>
+<span class="text-xs">schema.sql</span>
+</div>
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded">
+<span class="material-symbols-outlined text-sm text-tertiary" data-icon="code">code</span>
+<span class="text-xs">utils.ts</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Editor-Kern -->
+<div class="flex-1 flex flex-col bg-[#0a192f] relative group">
+<!-- Editor Tabs -->
+<div class="flex bg-[#151c26] h-9 overflow-x-auto">
+<div class="flex items-center px-4 space-x-2 bg-[#0a192f] border-t-2 border-tertiary">
+<span class="material-symbols-outlined text-xs text-primary-container" data-icon="database">database</span>
+<span class="text-xs">schema.sql</span>
+<span class="material-symbols-outlined text-[10px] opacity-0 group-hover:opacity-100" data-icon="close">close</span>
+</div>
+<div class="flex items-center px-4 space-x-2 text-on-surface-variant hover:bg-surface-container-high cursor-pointer">
+<span class="material-symbols-outlined text-xs text-tertiary" data-icon="javascript">javascript</span>
+<span class="text-xs">main.js</span>
+</div>
+</div>
+<!-- Code Area -->
+<div class="flex-1 overflow-auto p-4 font-mono text-sm leading-relaxed selection:bg-primary/30">
+<div class="flex">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">1</div>
+<div><span class="syntax-keyword">CREATE</span> <span class="syntax-keyword">TABLE</span> users (</div>
+</div>
+<div class="flex">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">2</div>
+<div class="pl-4">id <span class="syntax-keyword">UUID</span> <span class="syntax-keyword">PRIMARY KEY</span>,</div>
+</div>
+<div class="flex active-line-glow">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">3</div>
+<div class="pl-4">username <span class="syntax-keyword">VARCHAR</span>(<span class="syntax-string">255</span>) <span class="syntax-keyword">UNIQUE</span>,</div>
+</div>
+<div class="flex">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">4</div>
+<div class="pl-4"><span class="syntax-function">initialize_vector_store</span>()</div>
+</div>
+<div class="flex">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">5</div>
+<div>);</div>
+</div>
+<div class="flex mt-4">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">6</div>
+<div><span class="syntax-keyword">INSERT INTO</span> settings (key, value)</div>
+</div>
+<div class="flex">
+<div class="w-10 text-right pr-4 text-outline-variant select-none">7</div>
+<div class="pl-4"><span class="syntax-keyword">VALUES</span> (<span class="syntax-string">'vlm_model'</span>, <span class="syntax-string">'gpt-4-vision'</span>);</div>
+</div>
+</div>
+<!-- Bottom Terminal Area -->
+<div class="h-40 bg-[#080f18] flex flex-col border-t border-outline-variant/10">
+<div class="flex space-x-6 px-4 py-2 border-b border-outline-variant/5">
+<span class="text-[10px] font-bold font-headline text-tertiary border-b border-tertiary pb-1">TERMINAL</span>
+<span class="text-[10px] font-bold font-headline text-on-surface-variant hover:text-on-surface cursor-pointer">OUTPUT</span>
+<span class="text-[10px] font-bold font-headline text-on-surface-variant hover:text-on-surface cursor-pointer">DEBUG CONSOLE</span>
+</div>
+<div class="p-4 font-mono text-[11px] text-[#adc7ff]/80 overflow-y-auto">
+<div class="flex space-x-2">
+<span class="text-tertiary">$</span>
+<span>vector-db connect --host qdrant.internal</span>
+</div>
+<div class="text-tertiary opacity-70 mt-1">✓ Connected to Qdrant cluster (v1.6.2)</div>
+<div class="flex space-x-2 mt-2">
+<span class="text-tertiary">$</span>
+<span class="animate-pulse">_</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Symbol-Baum & Minimap -->
+<div class="w-48 bg-[#151c26] hidden xl:flex flex-col border-l border-transparent">
+<!-- Minimap -->
+<div class="h-64 relative bg-[#0d141d] m-2 rounded overflow-hidden select-none border border-outline-variant/10">
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<div class="h-1 bg-tertiary w-1/2 mt-2 ml-1"></div>
+<div class="h-1 bg-primary w-3/4 mt-1 ml-4"></div>
+<div class="h-1 bg-tertiary w-1/3 mt-1 ml-4 shadow-[0_0_4px_#00e639]"></div>
+<div class="h-1 bg-white w-2/3 mt-1 ml-4"></div>
+<div class="h-1 bg-primary w-1/4 mt-4 ml-1"></div>
+</div>
+<!-- Viewport Indicator -->
+<div class="absolute top-4 left-0 right-0 h-12 bg-white/5 border-y border-white/10"></div>
+</div>
+<!-- Symbols -->
+<div class="flex-1 overflow-y-auto">
+<div class="p-3 text-[10px] font-headline font-bold text-on-surface-variant tracking-wider flex justify-between items-center">
+                        SYMBOLS
+                        <span class="material-symbols-outlined text-xs" data-icon="filter_list">filter_list</span>
+</div>
+<div class="px-2 space-y-1">
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded group">
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="function">function</span>
+<span class="text-[11px] text-on-surface-variant group-hover:text-on-surface">initialize_vector_store</span>
+</div>
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded group">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="database">database</span>
+<span class="text-[11px] text-on-surface-variant group-hover:text-on-surface">users_table</span>
+</div>
+<div class="flex items-center space-x-2 py-1 px-2 hover:bg-surface-container-high cursor-pointer rounded group">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="key">key</span>
+<span class="text-[11px] text-on-surface-variant group-hover:text-on-surface">PK_id</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Statusleiste (Footer) -->
+<footer class="fixed bottom-0 w-full flex justify-between items-center px-3 z-50 bg-slate-950 dark:bg-[#080f18] h-6 font-['Inter'] text-[11px] font-medium border-t border-outline-variant/10">
+<div class="flex items-center space-x-4">
+<div class="flex items-center space-x-1 text-[#00e639] hover:bg-white/5 px-2 h-full cursor-pointer">
+<span class="material-symbols-outlined text-xs" data-icon="terminal">terminal</span>
+<span>SQL-Local</span>
+</div>
+<div class="flex items-center space-x-1 text-[#00e639] hover:bg-white/5 px-2 h-full cursor-pointer">
+<span class="material-symbols-outlined text-xs" data-icon="hub">hub</span>
+<span>Vector-Qdrant</span>
+</div>
+<div class="flex items-center space-x-1 text-[#00e639] hover:bg-white/5 px-2 h-full cursor-pointer">
+<span class="material-symbols-outlined text-xs" data-icon="visibility">visibility</span>
+<span>VLM-Active</span>
+</div>
+</div>
+<div class="flex items-center space-x-4 h-full">
+<span class="text-slate-400 dark:text-[#c1c6d7] hover:bg-white/5 px-2 h-full flex items-center cursor-pointer">Ln 1, Col 1</span>
+<span class="text-slate-400 dark:text-[#c1c6d7] hover:bg-white/5 px-2 h-full flex items-center cursor-pointer">UTF-8</span>
+<span class="text-slate-400 dark:text-[#c1c6d7] hover:bg-white/5 px-2 h-full flex items-center cursor-pointer">Prettier</span>
+<div class="flex items-center space-x-1 text-[#00e639] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#00e639] animate-pulse"></span>
+<span>v1.82.0-stable</span>
+</div>
+</div>
+</footer>
+</body></html>
