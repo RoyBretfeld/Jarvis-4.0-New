@@ -1,0 +1,29 @@
+# Jarvis 4.0 – Zentrales Logging-System
+# RB-Protokoll: Transparenz (Glass-Box) – alle Container-Logs aggregiert
+# Alle Logs landen in ./logs/ auf dem Host
+
+# ─────────────────────────────────────────────
+# Fluent Bit als Log-Aggregator (leichtgewichtig, kein Logstash-Overhead)
+# ─────────────────────────────────────────────
+version: "3.8"
+
+services:
+  jarvis-log-aggregator:
+    image: fluent/fluent-bit:3.0
+    container_name: jarvis-log-aggregator
+    restart: unless-stopped
+    user: "1000:1000"
+    networks:
+      - jarvis-internal
+    volumes:
+      - ./docker/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./logs:/var/log/jarvis:rw
+      # Docker-Socket READ-ONLY für Log-Collection
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - FLB_LOG_LEVEL=info
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

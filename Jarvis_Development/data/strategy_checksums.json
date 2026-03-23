@@ -1,0 +1,90 @@
+{
+  "sealed_at": "2026-03-20T22:26:18.864405+00:00",
+  "sealed_by": "jarvis-system",
+  "files": {
+    "Jarvis_Agent_Skill_Architektur.md": {
+      "sha256": "69560fa60f23f6234fa403faba514466cf7e6dc5e9a164b9308ca813ef5ee3b1",
+      "size": 3834
+    },
+    "Jarvis_Atomic_WorkPackage_Standard.md": {
+      "sha256": "40a092ce473dc8133ceeaedd2bd2371992d6217f7627d251f86adca01342a9b3",
+      "size": 2712
+    },
+    "Jarvis_Coding_Lab_Strategie_Prompts.md": {
+      "sha256": "de0492c0185aa622a0a1ba7fd0d7411910a3f8f88d8107b92ea29b23c19c1923",
+      "size": 3820
+    },
+    "Jarvis_Container_Orchestration_Strategie.md": {
+      "sha256": "bff96724e0aa891e6846a988b3a3c473a6dfabbc6fcce67704b7c143577f7d9b",
+      "size": 4015
+    },
+    "Jarvis_Control_Center_UI_Spezifikation.md": {
+      "sha256": "ed800b3bb408964170d451eaa25b7f7c3b725b4d031185376cc3ffeaf9b92ba5",
+      "size": 3474
+    },
+    "Jarvis_End_to_End_Workflow_Simulation.md": {
+      "sha256": "e1ae04af8243eb5d9aa6f8a684bb0412df6f093f90db6c68f372f536ee6fa0d6",
+      "size": 2381
+    },
+    "Jarvis_EXECUTION_MASTERPLAN_V1.md": {
+      "sha256": "90a34e830f6adf48edb1086abd5d62a668d368fba195503eff4119570f1d82b5",
+      "size": 3629
+    },
+    "Jarvis_Hardware_Implementation_Strategie.md": {
+      "sha256": "64cb8c72fdd6685dc449f9c0346172ef6aef9c044eeacb4828f156e39c5f43c5",
+      "size": 2814
+    },
+    "Jarvis_Local_Agent_Control_Direktive.md": {
+      "sha256": "5b3a061fa87567743304338df5417f846b5012fd84315a770b1a89969cbd529d",
+      "size": 1805
+    },
+    "Jarvis_Master_Skill_Katalog.md": {
+      "sha256": "39ad6a1c748e2a97c581d8400d3a68e33567f3a0d02a8c2672a6becd2810f3a8",
+      "size": 3636
+    },
+    "Jarvis_Multi_Agent_Collaboration_Strategie.md": {
+      "sha256": "a90e6c27cd35b6827eb750cefd132c6a585dbf6ccd0503f79fc0eeca48c7bb10",
+      "size": 2985
+    },
+    "Jarvis_Plugin_Integration_Strategie.md": {
+      "sha256": "bac6d5fbfea442d8eae5075d799e87a7b6572199dbfef035b3f78474613988ad",
+      "size": 3329
+    },
+    "Jarvis_RAG_Indexing_Strategie.md": {
+      "sha256": "6201d239159dd483b4fae6f0f4c604472548c40038f0524041c21e89f261f7a0",
+      "size": 2977
+    },
+    "Jarvis_RAG_Privacy_Filter_Strategie.md": {
+      "sha256": "a60151e4e7b39dd3d97e1c7a25491178847141c4a3caf947fdd39ae940ac0125",
+      "size": 2837
+    },
+    "Jarvis_Self_Evolution_Strategie.md": {
+      "sha256": "83f9f524c635dd426f492d2ad2df24f067d73f1b1692af43b37017b05827aa8c",
+      "size": 3323
+    },
+    "Jarvis_Sequential_Execution_Control.md": {
+      "sha256": "765063e5a4eaa1d463908ae67c51531b55f399c2f27fd896628122a63630bf64",
+      "size": 2789
+    },
+    "Jarvis_Skill_Creation_Protokoll.md": {
+      "sha256": "8de69bcbf986f0641d2da804af8bd85ffb567f42b12e9b7125c0748e24e042c1",
+      "size": 2541
+    },
+    "Jarvis_UI_Visual_Identity_Blueprint.md": {
+      "sha256": "52bab7afaf40de95b9a3bba09ae254dcc878fad260c0076040ed8b9d3b7ac698",
+      "size": 2928
+    },
+    "Jarvis_Unified_System_Integration_Strategie.md": {
+      "sha256": "9f3815bd115ac38b521dfa6fdf33c76887876e81cac81f9a14d2b61772d42a5b",
+      "size": 2915
+    },
+    "Jarvis_UX_Layout_Blueprint.md": {
+      "sha256": "aca50f5e476981f363b367e5f40a58a5b50f05b43d2515a4aa95cd225dd37ee5",
+      "size": 3356
+    },
+    "Jarvis_vs_ClaudeCode_Strategie_Vergleich.md": {
+      "sha256": "507483c22d08b667b006954eb3c9362b838ec5e08f92ae5ddbb9a2f1c7579702",
+      "size": 3880
+    }
+  }
+}

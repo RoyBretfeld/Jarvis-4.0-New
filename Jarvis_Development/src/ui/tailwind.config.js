@@ -1,0 +1,63 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: 'class',
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {
+      colors: {
+        // ── Chat Design (Neural Architect) ──────────────────
+        'chat-bg':                '#07090E',
+        'chat-surface':           '#0A0D14',
+        'chat-surface-low':       '#0F141F',
+        'chat-surface-high':      '#1A1F2E',
+        'chat-surface-highest':   '#1E293B',
+        'chat-primary':           '#5E81FF',
+        'chat-primary-dim':       '#7C9AFF',
+        'chat-outline':           '#475569',
+        'chat-outline-variant':   '#334155',
+        'chat-on-surface':        '#F1F5F9',
+        'chat-on-surface-variant':'#94A3B8',
+        // ── IDE Design (Kinetic Monolith) ────────────────────
+        'ide-bg':                 '#0d141d',
+        'ide-surface-low':        '#151c26',
+        'ide-surface':            '#19202a',
+        'ide-surface-high':       '#242a34',
+        'ide-surface-highest':    '#2e353f',
+        'ide-surface-lowest':     '#080f18',
+        'ide-primary':            '#adc7ff',
+        'ide-primary-container':  '#4a8eff',
+        'ide-tertiary':           '#00e639',
+        'ide-tertiary-container': '#00a827',
+        'ide-outline-variant':    '#414754',
+        'ide-on-surface':         '#dce3f0',
+        'ide-on-surface-variant': '#c1c6d7',
+        // ── RAG Design (Intelligente Schicht) ───────────────
+        'rag-bg':                 '#060e20',
+        'rag-surface-low':        '#091328',
+        'rag-surface':            '#0f1930',
+        'rag-surface-high':       '#141f38',
+        'rag-surface-highest':    '#192540',
+        'rag-primary':            '#78b0ff',
+        'rag-primary-container':  '#5ba2ff',
+        'rag-secondary':          '#70fda7',
+        'rag-tertiary':           '#8895ff',
+        'rag-outline':            '#6d758c',
+        'rag-outline-variant':    '#40485d',
+        'rag-on-surface':         '#dee5ff',
+        'rag-on-surface-variant': '#a3aac4',
+        'rag-error':              '#ff716c',
+        'rag-error-dim':          '#d7383b',
+      },
+      fontFamily: {
+        grotesk: ['Space Grotesk', 'sans-serif'],
+        inter:   ['Inter', 'sans-serif'],
+        code:    ['Fira Code', 'JetBrains Mono', 'monospace'],
+      },
+      animation: {
+        'logic-beam': 'logic-beam 2s ease-in-out infinite',
+        'thought-pulse': 'pulse 1.5s ease-in-out infinite',
+      },
+    },
+  },
+  plugins: [],
+}

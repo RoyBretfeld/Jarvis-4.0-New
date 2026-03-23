@@ -1,0 +1,167 @@
+# Jarvis 4.0 - Docker Compose
+# Container Orchestration gemäß Jarvis_Container_Orchestration_Strategie.md
+# CPU-Zuweisung: Ryzen 9 7950X (32 Threads)
+#   Core    -> Threads 0-1   (UI & API)
+#   Gateway -> Threads 2-3   (Privacy-Filter)
+#   RAG     -> Threads 4-7   (Embedding / Vektoren)
+#   Sandbox -> Threads 8-15  (Agent-Execution)
+
+networks:
+  jarvis-internal:
+    driver: bridge
+    internal: true        # kein direkter Internet-Zugriff
+  jarvis-external:
+    driver: bridge
+
+volumes:
+  qdrant-data:
+  chroma-data:
+  ollama-data:
+  core-data:
+
+services:
+
+  # ─────────────────────────────────────────────
+  # ZONE 1 – THE BRAIN (jarvis-core)
+  # ─────────────────────────────────────────────
+  jarvis-core:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.core
+    image: jarvis-core:latest
+    container_name: jarvis-core
+    restart: unless-stopped
+    cpuset: "0-1"
+    mem_limit: 4g
+    networks:
+      - jarvis-internal
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - core-data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    environment:
+      - JARVIS_ENV=${JARVIS_ENV:-production}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      jarvis-rag:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────
+  # ZONE 2 – THE MEMORY (jarvis-rag)
+  # ─────────────────────────────────────────────
+  jarvis-rag:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.rag
+    image: jarvis-rag:latest
+    container_name: jarvis-rag
+    restart: unless-stopped
+    cpuset: "4-7"
+    mem_limit: 8g
+    networks:
+      - jarvis-internal
+    volumes:
+      - qdrant-data:/qdrant/storage
+      - chroma-data:/chroma/data
+      - ./logs:/app/logs
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-bge-small-en-v1.5}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ─────────────────────────────────────────────
+  # ZONE 3 – THE BORDER (jarvis-gateway)
+  # ─────────────────────────────────────────────
+  jarvis-gateway:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.gateway
+    image: jarvis-gateway:latest
+    container_name: jarvis-gateway
+    restart: unless-stopped
+    cpuset: "2-3"
+    mem_limit: 2g
+    networks:
+      - jarvis-internal
+      - jarvis-external
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    environment:
+      - GATEWAY_PORT=8080
+      - PRIVACY_FILTER_ENABLED=true
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────
+  # ZONE 4 – THE WORKSHOP (jarvis-sandbox)
+  # ─────────────────────────────────────────────
+  jarvis-sandbox:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.sandbox
+    image: jarvis-sandbox:latest
+    container_name: jarvis-sandbox
+    restart: "no"
+    cpuset: "8-15"
+    mem_limit: 16g
+    networks:
+      - jarvis-internal
+    volumes:
+      - ./logs:/app/logs
+      - ./src:/workspace/src:ro
+    environment:
+      - SANDBOX_MODE=strict
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

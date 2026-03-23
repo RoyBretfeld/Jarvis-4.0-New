@@ -1,0 +1,37 @@
+# Jarvis 4.0 – ChromaDB Configuration
+# Fallback / Hybrid-Search-Partner für Qdrant
+# Keyword-Suche (exakt) ergänzt Qdrant-Vektorsuche (semantisch)
+
+chroma:
+  host: "0.0.0.0"
+  port: 8001
+  log_config_file: null
+  log_path: /chroma/logs/chroma.log
+
+  # Persistenz auf SSD2-Volume
+  persist_directory: /chroma/data
+
+  anonymized_telemetry: false    # Privacy: kein Telemetrie
+
+  # Concurrency (optimiert für cpuset 4-7)
+  chroma_server_nofile: 65535
+
+  # Embedding-Funktion wird vom jarvis-rag-Service injiziert
+  # (bge-small-en-v1.5 via SentenceTransformers)
+
+  # Sicherheit: Auth aktivieren wenn Gateway offline ist
+  chroma_server_authn_provider: "chromadb.auth.token.TokenAuthServerProvider"
+  # Token wird aus Container-Secret geladen, nicht aus .env
+  # chroma_server_authn_credentials_file: /run/secrets/chroma_token
+
+collections:
+  - name: "jarvis_documents"
+    metadata:
+      description: "Parsed MD/PDF/Code files"
+      hnsw_space: "cosine"
+  - name: "jarvis_skills"
+    metadata:
+      description: "Skill-Definitionen für RAG-gestützte Agenten"
+      hnsw_space: "cosine"
+
+log_level: INFO

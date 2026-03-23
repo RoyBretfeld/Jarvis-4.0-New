@@ -1,0 +1,51 @@
+# Jarvis 4.0 – Qdrant Vector Database Configuration
+# Basiert auf: Jarvis_RAG_Indexing_Strategie.md
+# SSD2-Mount: WAL + Storage auf dediziertem Laufwerk für minimalen I/O-Wait
+
+service:
+  host: "0.0.0.0"
+  http_port: 6333
+  grpc_port: 6334
+  # Nur internes Netzwerk – kein externer Zugriff
+  enable_cors: false
+
+storage:
+  # Primärspeicher auf SSD2 (via Docker Volume)
+  storage_path: /qdrant/storage
+
+  # Write-Ahead-Log auf schnellster NVMe (SSD1)
+  wal:
+    wal_capacity_mb: 256
+    wal_segments_ahead: 0
+
+  # Optimistic concurrency für parallele Embedding-Writes (Threads 4-7)
+  optimizers_config:
+    default_segment_number: 4
+    max_segment_size_kb: 204800    # 200 MB pro Segment
+    memmap_threshold_kb: 51200     # 50 MB – ab hier Memory-Map statt RAM
+    indexing_threshold_kb: 20480   # 20 MB – ab hier HNSW-Index aufbauen
+    flush_interval_sec: 5
+    max_optimization_threads: 4   # entspricht cpuset 4-7
+
+  # Product Quantization für Cold Data (RAM-Ersparnis)
+  quantization:
+    always_ram: false
+
+  # Snapshot-Konfiguration (Undo-King: Revisionssicherheit)
+  snapshots_path: /qdrant/snapshots
+
+collections:
+  # Standard-Collection für Jarvis-Wissensbasis
+  jarvis_knowledge:
+    vectors:
+      size: 384                    # bge-small-en-v1.5 Dimensionen
+      distance: Cosine
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+      full_scan_threshold: 10000
+    optimizers_config:
+      indexing_threshold_kb: 20480
+    replication_factor: 1
+
+log_level: INFO

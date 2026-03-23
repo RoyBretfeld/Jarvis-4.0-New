@@ -1,0 +1,33 @@
+## Jarvis Sandbox — Isolated Agent Execution Runtime
+## Zone 4: Threads 8-15 | 16 GB RAM
+## no-new-privileges + cap_drop: ALL (hardened)
+## kein Außennetz, kein Auto-Restart
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Sandbox deps: pytest + ruff for agent test execution
+RUN pip install --no-cache-dir \
+        pytest==8.2.0 \
+        pytest-asyncio==0.23.6 \
+        ruff==0.4.4 \
+        httpx==0.27.0
+
+# Sandbox runner script
+COPY sandbox_runner.py /workspace/sandbox_runner.py
+
+RUN mkdir -p /workspace/src /workspace/logs /tmp/sandbox \
+    && groupadd -g 1000 jarvis \
+    && useradd -u 1000 -g jarvis -s /bin/sh jarvis \
+    && chown -R jarvis:jarvis /workspace
+USER jarvis
+
+HEALTHCHECK --interval=60s --timeout=5s --retries=2 --start-period=5s \
+    CMD python3 -c "import sys; sys.exit(0)"
+
+CMD ["python3", "/workspace/sandbox_runner.py"]
