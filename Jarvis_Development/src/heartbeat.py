@@ -21,39 +21,6 @@ def get_compose_file_path() -> Path:
 
 # ... (rest of the file content)
 
-class HeartbeatReport:
-    def __init__(self, timestamp: str, containers: List[Any], ollama: Any, overall: str, self_heals: List[Any]):
-        self.timestamp = timestamp
-        self.containers = containers
-        self.ollama = ollama
-        self.overall = overall
-        self.self_heals = self_heals
-
-async def check_all_containers():
-    # Placeholder implementation
-    return []
-
-async def check_ollama(session):
-    # Placeholder implementation
-    return {}
-
-async def self_heal(containers):
-    # Placeholder implementation
-    return []
-
-def compute_overall(containers, ollama):
-    # Placeholder implementation
-    return "OK"
-
-def log_report(report):
-    # Placeholder implementation
-    print(f"Heartbeat Report: {report}")
-
-def persist_report(report):
-    # Placeholder implementation
-    with open("heartbeat.log", "a") as f:
-        f.write(str(report) + "\n")
-
 async def run_once() -> HeartbeatReport:
     COMPOSE_FILE = get_compose_file_path()
     async with aiohttp.ClientSession(
