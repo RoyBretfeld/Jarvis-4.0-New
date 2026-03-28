@@ -1,8 +1,15 @@
 import os
 import platform
 from typing import Any, List
+from pathlib import Path
+import logging
+import aiohttp
+import asyncio
+from datetime import datetime, timezone
 
 # ... (rest of the file content)
+
+log = logging.getLogger(__name__)
 
 def get_compose_file_path() -> Path:
     """Determine the path to the docker-compose.yml file."""
