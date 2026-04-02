@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         gcc \
         g++ \
-    && pip3 install --no-cache-dir --prefer-binary --break-system-packages chromadb==0.4.24 \
+    && pip3 install --no-cache-dir --prefer-binary --break-system-packages "numpy==1.26.4" "chromadb==0.4.24" \
     && rm -rf /var/lib/apt/lists/*
 
 # Supervisord config: run Qdrant + ChromaDB side by side

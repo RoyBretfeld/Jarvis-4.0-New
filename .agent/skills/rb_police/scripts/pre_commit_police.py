@@ -57,11 +57,15 @@ def main():
                 # Wir warnen nur lokal, da diese Dateien lokal nötig sind, aber nicht ins Git dürfen
                 print(f"[POLICE] ℹ️  Lokale Config gefunden (Check .gitignore): {f.name}")
 
-    # 2. Scan Source Code in src/
-    src = root / "src"
-    if src.exists():
-        for py_file in src.rglob("*.py"):
-            scan_file(py_file)
+    # 2. Scan Source Code in src/, system/, Jarvis_Development/
+    EXCLUDE_DIRS = {".git", ".venv", "__pycache__", "node_modules"}
+    for folder in ["src", "system", "Jarvis_Development"]:
+        src = root / folder
+        if src.exists():
+            for py_file in src.rglob("*.py"):
+                if any(ex in py_file.parts for ex in EXCLUDE_DIRS):
+                    continue
+                scan_file(py_file)
     
     # 3. Check Protocol Existence
     if not (root / "docs/_rb/02_SYSTEM_FACTS.md").exists():

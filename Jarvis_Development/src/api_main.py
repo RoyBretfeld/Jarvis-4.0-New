@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import os
+import re as _re
 import stat
 from pathlib import Path
 from typing import Any
@@ -20,7 +21,7 @@ from typing import Any
 import shutil
 import tempfile
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -64,7 +65,7 @@ app.add_middleware(
         "http://127.0.0.1",
         "http://127.0.0.1:3001",
     ],
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -544,6 +545,361 @@ async def dispatch_agent(agent_name: str, req: AgentTaskRequest) -> dict:
     except Exception as exc:
         log.error("Agent %s error: %s", agent_name, exc, exc_info=True)
         raise HTTPException(500, str(exc)) from exc
+
+
+# ─────────────────────────────────────────────
+# AWP-102/105/106/110 – Knowledge Ingestion Endpoints
+# ─────────────────────────────────────────────
+UPLOADS_DIR = Path(__file__).parent.parent / "data" / "uploads"
+REGISTRY_FILE = UPLOADS_DIR / "registry.json"
+
+
+def _load_registry() -> list[dict]:
+    if not REGISTRY_FILE.exists():
+        return []
+    try:
+        return json.loads(REGISTRY_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _save_registry(docs: list[dict]) -> None:
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    REGISTRY_FILE.write_text(json.dumps(docs, indent=2, ensure_ascii=False),
+                              encoding="utf-8")
+
+
+@app.post("/ingest/upload", tags=["Ingest"])
+async def ingest_upload(file: UploadFile = File(...)) -> dict[str, Any]:
+    """
+    AWP-102: Nimmt PDF, MD oder TXT entgegen.
+    AWP-103: Parst mit parser_logic (PyMuPDF für PDFs).
+    AWP-104: Chunked in ~500-Token-Blöcke (10% Overlap).
+    AWP-105/106: Embedding via ProcessPoolExecutor + Upsert in Qdrant/ChromaDB.
+    """
+    allowed_ext = {".pdf", ".md", ".txt"}
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in allowed_ext:
+        raise HTTPException(400, f"Nicht unterstützt: {suffix}. Erlaubt: {allowed_ext}")
+
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    save_path = UPLOADS_DIR / (file.filename or "upload")
+
+    # ── Empfang ────────────────────────────────
+    total = 0
+    try:
+        with save_path.open("wb") as f:
+            chunk_size = 1024 * 1024
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_bytes:
+                    save_path.unlink(missing_ok=True)
+                    raise HTTPException(413, f"Datei zu groß. Max {MAX_UPLOAD_MB}MB.")
+                f.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        save_path.unlink(missing_ok=True)
+        raise HTTPException(500, f"Empfangsfehler: {exc}") from exc
+
+    log.info("Ingest upload received: %s (%.1f MB)", file.filename, total / 1024 / 1024)
+
+    # ── Parse (AWP-103) ────────────────────────
+    try:
+        from parser_logic import parse_document, chunk_document  # type: ignore
+        parsed = parse_document(save_path)
+    except Exception as exc:
+        log.error("Parser error: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Parse-Fehler: {exc}") from exc
+
+    # ── Chunk (AWP-104) ────────────────────────
+    chunks = chunk_document(parsed)
+    if not chunks:
+        return {"status": "empty", "filename": file.filename, "chunks": 0}
+
+    # ── Embed + Upsert (AWP-105/106) ──────────────────────────────────────────
+    # embed_async läuft im ThreadPool (kein Fork → kein Socket-Kill bei Qdrant/Chroma).
+    # memory.upsert() embedded intern, kein doppeltes Embedding nötig.
+    from memory_interface import Document, get_memory  # type: ignore
+    import datetime as _dt
+
+    ts = _dt.datetime.utcnow().isoformat()
+    docs = [
+        Document(
+            doc_id=f"{c.source_file}::chunk_{c.chunk_index}",
+            text=c.text,
+            metadata={
+                "source": c.source_file,
+                "filename": file.filename,
+                "chunk_index": c.chunk_index,
+                "uploaded_at": ts,
+            },
+        )
+        for c in chunks
+    ]
+    totals = await get_memory().upsert(docs)
+
+    # ── Registry updaten ───────────────────────
+    registry = _load_registry()
+    registry = [r for r in registry if r.get("filename") != file.filename]
+    registry.append({
+        "filename": file.filename,
+        "source_id": parsed.source_id,
+        "uploaded_at": ts,
+        "chunks": len(chunks),
+        "size_mb": round(total / 1024 / 1024, 2),
+        "pages": parsed.page_count,
+    })
+    _save_registry(registry)
+
+    log.info("Ingest complete: %s → %d chunks, %s", file.filename, len(chunks), totals)
+    return {
+        "status": "ok",
+        "filename": file.filename,
+        "size_mb": round(total / 1024 / 1024, 2),
+        "pages": parsed.page_count,
+        "chunks": len(chunks),
+        "vectors": totals,
+    }
+
+
+@app.get("/ingest/documents", tags=["Ingest"])
+async def list_ingest_documents() -> list[dict]:
+    """AWP-110: Listet alle hochgeladenen Dokumente aus dem Registry."""
+    return _load_registry()
+
+
+@app.delete("/ingest/document", tags=["Ingest"])
+async def delete_ingest_document(filename: str) -> dict[str, Any]:
+    """AWP-110: Entfernt ein Dokument vollständig aus Qdrant + ChromaDB + Registry."""
+    registry = _load_registry()
+    entry = next((r for r in registry if r.get("filename") == filename), None)
+    if not entry:
+        raise HTTPException(404, f"Dokument nicht gefunden: {filename!r}")
+
+    source_id = entry.get("source_id", f"upload::{filename}")
+    log.info("Delete ingest document: %s (source=%s)", filename, source_id)
+
+    try:
+        from memory_interface import get_memory  # type: ignore
+        result = await get_memory().delete_by_source(source_id)
+    except Exception as exc:
+        log.error("Delete error: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Lösch-Fehler: {exc}") from exc
+
+    # Datei aus uploads löschen
+    upload_file = UPLOADS_DIR / filename
+    upload_file.unlink(missing_ok=True)
+
+    # Registry aktualisieren
+    _save_registry([r for r in registry if r.get("filename") != filename])
+
+    return {"status": "deleted", "filename": filename, "vectors": result}
+
+
+# ─────────────────────────────────────────────
+# AWP-102/104/105/108/109 – Chat Session Upload
+# In-Memory-Store: Text sofort verfügbar, RAG im Hintergrund
+# ─────────────────────────────────────────────
+SESSION_DIR = Path(__file__).parent.parent / "data" / "session_files"
+
+# In-memory Session-Store (wird bei Container-Neustart geleert)
+_SESSION: dict[str, dict[str, Any]] = {}   # filename → metadata + text
+
+# AWP-@security: Prompt-Injection & Shell-Escape Patterns
+_INJECTION_PATTERNS = [
+    r"ignore\s+previous\s+instructions",
+    r"disregard\s+your\s+instructions",
+    r"new\s+system\s+prompt",
+    r"<\s*script[\s>\/]",
+    r"eval\s*\(",
+    r"exec\s*\(",
+    r"__import__\s*\(",
+    r"subprocess\.",
+    r"os\.system\s*\(",
+]
+
+
+def _security_scan(text: str) -> list[str]:
+    """AWP @security: Scannt auf Prompt-Injection und Shell-Command-Patterns."""
+    found = []
+    probe = text[:8000]
+    for p in _INJECTION_PATTERNS:
+        if _re.search(p, probe, flags=_re.IGNORECASE):
+            found.append(p)
+    return found
+
+
+async def _background_rag_index(text: str, filename: str, source_id: str) -> None:
+    """AWP-108: Nicht-blockierendes RAG-Embedding via FastAPI BackgroundTask."""
+    try:
+        from parser_logic import ParsedDocument, chunk_document  # type: ignore
+        from memory_interface import Document, get_memory        # type: ignore
+        import datetime as _dt
+
+        parsed = ParsedDocument(
+            filename=filename,
+            source_id=source_id,
+            text_by_page=[text],
+            page_count=1,
+            size_bytes=len(text.encode()),
+        )
+        chunks = chunk_document(parsed)
+        if not chunks:
+            return
+
+        ts = _dt.datetime.utcnow().isoformat()
+        docs = [
+            Document(
+                doc_id=f"{c.source_file}::chunk_{c.chunk_index}",
+                text=c.text,
+                metadata={
+                    "source": c.source_file,
+                    "filename": filename,
+                    "chunk_index": c.chunk_index,
+                    "uploaded_at": ts,
+                    "tag": "session_upload",   # AWP-104
+                },
+            )
+            for c in chunks
+        ]
+        await get_memory().upsert(docs)
+        log.info("Session RAG complete: %s → %d chunks", filename, len(docs))
+    except Exception as exc:
+        log.error("Background RAG index error for %s: %s", filename, exc)
+
+
+@app.post("/chat/upload", tags=["Chat"])
+async def chat_upload(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+) -> dict[str, Any]:
+    """
+    AWP-102: Lädt Datei hoch, extrahiert sofort Text → sofortige Response.
+    AWP-104: Session-Store mit tag='session_upload'.
+    AWP-108: RAG-Indizierung via BackgroundTask (non-blocking).
+    AWP-@security: Prüft auf Injection-Patterns vor der Speicherung.
+    """
+    allowed_ext = {".pdf", ".md", ".txt"}
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in allowed_ext:
+        raise HTTPException(400, f"Nicht unterstützt: {suffix}. Erlaubt: {allowed_ext}")
+
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+    SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    save_path = SESSION_DIR / (file.filename or "upload")
+
+    # Datei speichern
+    total = 0
+    try:
+        with save_path.open("wb") as fh:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > max_bytes:
+                    save_path.unlink(missing_ok=True)
+                    raise HTTPException(413, f"Max {MAX_UPLOAD_MB}MB überschritten.")
+                fh.write(chunk)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        save_path.unlink(missing_ok=True)
+        raise HTTPException(500, f"Empfangsfehler: {exc}") from exc
+
+    # AWP-103: Text extrahieren
+    try:
+        from parser_logic import parse_document  # type: ignore
+        parsed = parse_document(save_path)
+        full_text = "\n\n".join(parsed.text_by_page)
+    except Exception as exc:
+        save_path.unlink(missing_ok=True)
+        raise HTTPException(500, f"Parse-Fehler: {exc}") from exc
+
+    if not full_text.strip():
+        return {"status": "empty", "filename": file.filename, "pages": 0, "chars": 0}
+
+    # AWP-@security: Scan bevor irgend etwas gespeichert wird
+    threats = _security_scan(full_text)
+    if threats:
+        log.warning("Security BLOCK: %s — Patterns: %s", file.filename, threats)
+        save_path.unlink(missing_ok=True)
+        raise HTTPException(
+            422,
+            f"Datei abgelehnt — @security hat verdächtige Muster gefunden: {threats}",
+        )
+
+    # AWP-104/105: Im Session-Store ablegen (direkte System-Prompt-Injektion)
+    import datetime as _dt
+    ts = _dt.datetime.utcnow().isoformat()
+    source_id = f"session::{file.filename}"
+    _SESSION[file.filename] = {
+        "filename":   file.filename,
+        "source_id":  source_id,
+        "text":       full_text[:16000],  # max 16K Zeichen für Context-Window
+        "pages":      parsed.page_count,
+        "size_mb":    round(total / 1024 / 1024, 2),
+        "chars":      len(full_text),
+        "uploaded_at": ts,
+    }
+
+    # AWP-108: RAG im Hintergrund — Response ist bereits draußen
+    background_tasks.add_task(_background_rag_index, full_text, file.filename, source_id)
+
+    log.info("Chat upload OK: %s (%.1fMB, %d chars) → session+RAG(bg)",
+             file.filename, total / 1024 / 1024, len(full_text))
+    return {
+        "status":   "ok",
+        "filename": file.filename,
+        "pages":    parsed.page_count,
+        "size_mb":  round(total / 1024 / 1024, 2),
+        "chars":    len(full_text),
+        "preview":  full_text[:300].replace("\n", " "),
+    }
+
+
+@app.get("/chat/session-files", tags=["Chat"])
+async def list_session_files() -> list[dict]:
+    """AWP-105/109: Aktive Session-Dateien (ohne vollen Text)."""
+    return [
+        {k: v for k, v in entry.items() if k != "text"}
+        for entry in _SESSION.values()
+    ]
+
+
+@app.get("/chat/session-context", tags=["Chat"])
+async def get_session_context() -> dict[str, Any]:
+    """AWP-105: Kombinierten Session-Text für System-Prompt-Injektion."""
+    if not _SESSION:
+        return {"context": "", "files": []}
+    parts = [
+        f"[Session-Datei: {e['filename']} | {e['pages']} Seite(n) | {e['chars']} Zeichen]\n{e['text']}"
+        for e in _SESSION.values()
+    ]
+    return {
+        "context": "\n\n---\n\n".join(parts),
+        "files":   [e["filename"] for e in _SESSION.values()],
+    }
+
+
+@app.delete("/chat/clear-session", tags=["Chat"])
+async def clear_session() -> dict[str, Any]:
+    """AWP-109: Löscht alle Session-Dateien aus Memory und Disk."""
+    filenames = list(_SESSION.keys())
+    _SESSION.clear()
+    deleted = 0
+    for name in filenames:
+        p = SESSION_DIR / name
+        if p.exists():
+            p.unlink(missing_ok=True)
+            deleted += 1
+    log.info("Session cleared: %d Dateien", len(filenames))
+    return {"status": "cleared", "files_removed": len(filenames), "disk_deleted": deleted}
 
 
 # ─────────────────────────────────────────────

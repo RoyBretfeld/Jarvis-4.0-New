@@ -1,6 +1,8 @@
 # env
 .env
 .env.*
+models/
+Jarvis_Development/models/
 
 # python
 .venv/
@@ -14,6 +16,9 @@ node_modules/
 PROJECT_CONTEXT_DUMP_*.txt
 .rb_dumps/
 
+# aider
+.aider*
+
 # db dumps
 *.db
 *.sqlite
@@ -22,6 +27,16 @@ PROJECT_CONTEXT_DUMP_*.txt
 .DS_Store
 Thumbs.db
 
-# data / models
-models/
+# Next.js
+.next/
+*.gz
+dist/
+
+# RB-Protokoll extra safety
+client_secrets.json
+credentials.json
+token.json
+*.pem
+*.key
+*.db-journal
 logs/

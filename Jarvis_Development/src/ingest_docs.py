@@ -26,6 +26,10 @@ log = logging.getLogger("jarvis.ingest")
 
 CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP = int(os.environ.get("RAG_CHUNK_OVERLAP", "100"))
+# AWP-112: char-based RCST params (2000 chars ≈ 500 tokens, 25% overlap)
+RCST_CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE_CHARS", "2000"))
+RCST_OVERLAP    = int(os.environ.get("RAG_CHUNK_OVERLAP_CHARS", "500"))
+_RCST_SEPARATORS = ["\n\n", "\n", ". ", ", ", " ", ""]
 # Nutze Threads 4-7 (cpuset) für Embedding-Parallelisierung
 EMBED_WORKERS = int(os.environ.get("EMBED_WORKERS", "4"))
 BATCH_SIZE = int(os.environ.get("INGEST_BATCH_SIZE", "32"))
@@ -108,6 +112,115 @@ class MarkdownChunker:
 
 
 # ─────────────────────────────────────────────
+# AWP-112: Recursive Character Text Splitter
+# Port of LangChain's RCST — no external deps.
+# Separator hierarchy: paragraph → line → sentence → word → char
+# ─────────────────────────────────────────────
+class RecursiveCharacterTextSplitter:
+    """
+    Semantic chunking via recursive separator fallback.
+    Yields character-exact chunks with configurable overlap.
+    API-compatible with MarkdownChunker: .chunk(text, source) → list[TextChunk]
+    """
+
+    def __init__(
+        self,
+        chunk_size: int = RCST_CHUNK_SIZE,
+        chunk_overlap: int = RCST_OVERLAP,
+        separators: list[str] | None = None,
+    ) -> None:
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.separators = separators if separators is not None else list(_RCST_SEPARATORS)
+
+    # ── Internals ──────────────────────────────
+    def _merge(self, pieces: list[str], sep: str) -> list[str]:
+        """Re-merge atom-splits into max-size chunks, keeping overlap tail."""
+        sep_len = len(sep)
+        result: list[str] = []
+        window: list[str] = []
+        window_len = 0
+
+        for piece in pieces:
+            piece_len = len(piece)
+            extra = piece_len + (sep_len if window else 0)
+            if window_len + extra > self.chunk_size and window:
+                chunk = sep.join(window).strip()
+                if chunk:
+                    result.append(chunk)
+                # Trim front until within overlap budget
+                while window and window_len > self.chunk_overlap:
+                    dropped = window.pop(0)
+                    window_len -= len(dropped) + (sep_len if window else 0)
+            window.append(piece)
+            window_len += piece_len + (sep_len if len(window) > 1 else 0)
+
+        if window:
+            chunk = sep.join(window).strip()
+            if chunk:
+                result.append(chunk)
+        return result
+
+    def _split_recursive(self, text: str, separators: list[str]) -> list[str]:
+        # Pick first separator that actually appears in text
+        sep = separators[-1]   # ultimate fallback: char-by-char
+        tail_seps: list[str] = []
+        for i, s in enumerate(separators):
+            if s == "" or s in text:
+                sep = s
+                tail_seps = separators[i + 1:]
+                break
+
+        raw = text.split(sep) if sep else list(text)
+        good: list[str] = []
+        final: list[str] = []
+
+        for piece in raw:
+            piece = piece.strip("\n") if sep == "\n" else piece
+            if not piece:
+                continue
+            if len(piece) <= self.chunk_size:
+                good.append(piece)
+            else:
+                if good:
+                    final.extend(self._merge(good, sep))
+                    good = []
+                if tail_seps:
+                    final.extend(self._split_recursive(piece, tail_seps))
+                else:
+                    final.append(piece)   # can't split further
+
+        if good:
+            final.extend(self._merge(good, sep))
+
+        return [c for c in final if c.strip()]
+
+    def split_text(self, text: str) -> list[str]:
+        return self._split_recursive(text, self.separators)
+
+    def chunk(self, text: str, source: str) -> list[TextChunk]:
+        """Produce TextChunk list (same API as MarkdownChunker.chunk)."""
+        parts = self.split_text(text)
+        chunks: list[TextChunk] = []
+        cursor = 0
+        for i, part in enumerate(parts):
+            # Find part in original text for char positions
+            probe = part[:64]
+            idx = text.find(probe, cursor)
+            start = idx if idx != -1 else cursor
+            end = start + len(part)
+            chunks.append(TextChunk(
+                text=part,
+                source_file=source,
+                chunk_index=i,
+                char_start=start,
+                char_end=end,
+            ))
+            cursor = max(0, end - self.chunk_overlap)
+        return chunks
+
+
+# ─────────────────────────────────────────────
 # Embedding Worker (runs in subprocess for Multiprocessing)
 # Isolated function – must be picklable (top-level)
 # ─────────────────────────────────────────────
@@ -134,7 +247,7 @@ class IngestionPipeline:
     def __init__(self, docs_dir: Path, workers: int = EMBED_WORKERS) -> None:
         self.docs_dir = docs_dir
         self.workers = workers
-        self.chunker = MarkdownChunker()
+        self.chunker = RecursiveCharacterTextSplitter()  # AWP-112: RCST
 
     # ── Phase 1: Extraction ────────────────────
     def _load_files(self) -> list[tuple[Path, str]]:

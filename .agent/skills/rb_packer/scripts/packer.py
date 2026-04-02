@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Set
 
 # Default includes - automatically detect common project structures
-DEFAULT_INCLUDE_DIRS = ["docs/_rb", "src", "tests", "scripts"]
+DEFAULT_INCLUDE_DIRS = ["docs/_rb", "src", "tests", "scripts", "Jarvis_Development", "system"]
 COMMON_PROJECT_DIRS = [
     "backend", "frontend", "server", "client",
     "app", "lib", "pkg", "packages",

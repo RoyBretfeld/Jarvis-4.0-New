@@ -125,27 +125,33 @@ class QdrantMemory:
             log.info("Created Qdrant collection: %s", QDRANT_COLLECTION)
 
     async def upsert(self, documents: list[Document]) -> int:
-        """Embed and upsert documents. Returns count inserted."""
+        """Embed (parallel) and upsert documents. Returns count inserted.
+        AWP-114: asyncio.gather embeds all chunks simultaneously via ThreadPool.
+        """
         if not documents:
             return 0
         client = self._ensure_client()
         from qdrant_client.models import PointStruct  # type: ignore
 
         loop = asyncio.get_event_loop()
-        points = []
-        for doc in documents:
-            vector = await embed_async(doc.text)
-            points.append(PointStruct(
-                id=doc.doc_id,
+
+        # AWP-114: parallel embedding — 32-thread Ryzen via ThreadPool
+        vectors = await asyncio.gather(*[embed_async(doc.text) for doc in documents])
+
+        points = [
+            PointStruct(
+                id=str(uuid.uuid5(uuid.NAMESPACE_URL, doc.doc_id)),
                 vector=vector,
-                payload={**doc.metadata, "text": doc.text},
-            ))
+                payload={**doc.metadata, "text": doc.text, "doc_id": doc.doc_id},
+            )
+            for doc, vector in zip(documents, vectors)
+        ]
 
         await loop.run_in_executor(
             None,
             lambda: client.upsert(collection_name=QDRANT_COLLECTION, points=points),
         )
-        log.info("Qdrant upsert: %d documents", len(points))
+        log.info("Qdrant upsert: %d documents (parallel)", len(points))
         return len(points)
 
     async def search(
@@ -177,6 +183,31 @@ class QdrantMemory:
 
         log.info("Qdrant search '%s': %d results", query[:50], len(results))
         return results
+
+    async def delete_by_source(self, source: str) -> int:
+        """Löscht alle Punkte bei denen metadata.source mit source beginnt."""
+        from qdrant_client.models import (  # type: ignore
+            FilterSelector, Filter, FieldCondition, MatchText
+        )
+        client = self._ensure_client()
+        loop = asyncio.get_event_loop()
+        # MatchText für prefix-Match auf source_id "upload::filename"
+        await loop.run_in_executor(
+            None,
+            lambda: client.delete(
+                collection_name=QDRANT_COLLECTION,
+                points_selector=FilterSelector(
+                    filter=Filter(
+                        must=[FieldCondition(
+                            key="source",
+                            match=MatchText(text=source),
+                        )]
+                    )
+                ),
+            ),
+        )
+        log.info("Qdrant delete_by_source: source=%s", source)
+        return 1  # Qdrant gibt keine exakte Zahl zurück
 
     def health(self) -> bool:
         try:
@@ -219,13 +250,17 @@ class ChromaMemory:
             return 0
         self._ensure_client()
         col = self._collection
+        if col is None:
+            # Verbindung war unterbrochen – reset für nächsten Versuch
+            self._client = None
+            raise RuntimeError("ChromaDB collection nicht initialisiert")
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None,
             lambda: col.upsert(
                 ids=[d.doc_id for d in documents],
                 documents=[d.text for d in documents],
-                metadatas=[d.metadata for d in documents],
+                metadatas=[{k: str(v) for k, v in d.metadata.items()} for d in documents],
             ),
         )
         log.info("ChromaDB upsert: %d documents", len(documents))
@@ -254,6 +289,21 @@ class ChromaMemory:
 
         log.info("ChromaDB search '%s': %d results", query[:50], len(output))
         return output
+
+    async def delete_by_source(self, source: str) -> int:
+        """Löscht alle ChromaDB-Dokumente mit metadata source enthält source."""
+        self._ensure_client()
+        col = self._collection
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            None,
+            lambda: col.get(where={"source": {"$contains": source}}),
+        )
+        ids = results.get("ids", [])
+        if ids:
+            await loop.run_in_executor(None, lambda: col.delete(ids=ids))
+        log.info("ChromaDB delete_by_source: source=%s, deleted=%d", source, len(ids))
+        return len(ids)
 
     def health(self) -> bool:
         try:
@@ -284,6 +334,15 @@ class JarvisMemory:
             self.chroma.upsert(documents),
         )
         return {"qdrant": qdrant_count, "chroma": chroma_count}
+
+    async def delete_by_source(self, source: str) -> dict[str, int]:
+        """Löscht alle Chunks beider Backends die zur source gehören."""
+        q, c = await asyncio.gather(
+            self.qdrant.delete_by_source(source),
+            self.chroma.delete_by_source(source),
+        )
+        log.info("delete_by_source '%s': qdrant=%s, chroma=%d", source, q, c)
+        return {"qdrant": q, "chroma": c}
 
     async def search(
         self,

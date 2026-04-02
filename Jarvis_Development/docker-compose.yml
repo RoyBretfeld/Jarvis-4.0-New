@@ -35,16 +35,26 @@ services:
     mem_limit: 4g
     networks:
       - jarvis-internal
+      - jarvis-external
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - core-data:/app/data
       - ./logs:/app/logs
       - ./config:/app/config:ro
+      - ./state.json:/app/state.json:ro
     environment:
       - JARVIS_ENV=${JARVIS_ENV:-production}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONPATH=/app/src
+      - QDRANT_HOST=jarvis-rag
+      - QDRANT_PORT=6333
+      - CHROMA_HOST=jarvis-rag
+      - CHROMA_PORT=8001
+      - EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+      - HF_HOME=/app/data/hf_cache
+      - TRANSFORMERS_CACHE=/app/data/hf_cache
     logging:
       driver: "json-file"
       options:

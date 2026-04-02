@@ -68,9 +68,17 @@ Export-rb-Protokoll/
 └── docs/
     ├── DESIGN_SYSTEM_v1.md     ← Sovereign Glass UI/UX System
     └── _rb/
-        ├── 01_PLAN_EXECUTION.md ← §5 Regel
-        ├── 02_SYSTEM_FACTS.md  ← Template (muss ausgefüllt werden)
-        └── 03_ERROR_DB.md      ← Template (wächst mit der Zeit)
+        ├── 00_BOOT_PROTOCOL.md  ← Verfassung (DoD, Guardrails, Agent-Regeln)
+        ├── 01_AGENT_LOOP.md     ← 9-Schritt Arbeitsschleife
+        ├── 01_MISSION_PROMPT.md ← GSD-Phasen (MAP/SPEC/PLAN/EXEC/VERIFY)
+        ├── 01_PLAN_EXECUTION.md ← §5 Plan Execution Autonomy
+        ├── 02_SYSTEM_FACTS.md   ← Template (muss ausgefüllt werden)
+        ├── 03_ERROR_DB.md       ← Template (wächst mit der Zeit)
+        ├── 04_STANDARDS.md      ← Code- & Architektur-Regeln
+        ├── 04_UX_LAWS.md        ← Die 4 UX-Gesetze
+        ├── 05_SECURITY.md       ← Security-Regeln (Secrets, Auth, DSGVO)
+        ├── 06_TEST_MATRIX.md    ← Testmatrix-Template
+        └── BOOTSTRAP_PROMPT.md  ← Onboarding-Prompt für neue Projekte
 ```
 
 ---
@@ -119,6 +127,19 @@ MeinProjekt/
 │   └── _rb/
 └── ...
 ```
+
+---
+
+## 🔧 SCHRITT 1b: BOOTSTRAP_PROMPT ausführen (empfohlen)
+
+Nach dem Kopieren startest du einmalig den **Bootstrap-Prozess**, der das Framework auf dein Projekt zuschneidet:
+
+```
+Öffne eine neue Agent-Session und sende den Inhalt von:
+docs/_rb/BOOTSTRAP_PROMPT.md
+```
+
+Der Agent passt dann automatisch `02_SYSTEM_FACTS.md`, `06_TEST_MATRIX.md`, `scripts/pre_commit_police.py` und `scripts/packer.py` auf deinen konkreten Stack an.
 
 ---
 
@@ -419,6 +440,29 @@ Siehe auch: `docs/_rb/01_PLAN_EXECUTION.md` in der Hauptinstallation
 
 ---
 
+## 🗺️ GSD-Phasen-Logik – Der Agent-Workflow
+
+Das RB-Protokoll v3.1 definiert 5 verpflichtende Phasen für jede Arbeit:
+
+| Phase | Frage | Output |
+|---|---|---|
+| **MAP** | Was existiert? | `.planning/codebase/architecture.md` |
+| **SPEC** | Was wird gebraucht? | `.planning/requirements.md` (PRD) |
+| **PLAN** | Wie wird es gebaut? | `.planning/roadmap.md` (atomare Slices) |
+| **EXEC** | Bauen. | Code + Git-Commits (1 pro Slice) |
+| **VERIFY** | Stimmt das Ergebnis? | VERIFY-Eintrag in `roadmap.md` |
+
+**Stopps:**
+- Nach SPEC: Agent wartet auf `/approve`
+- Nach PLAN: Agent wartet auf `USER_APPROVE: EXECUTE`
+- Nach EXEC des letzten Slice: VERIFY ist Pflicht vor Merge
+
+**SSOT-Regel:** Das Gedächtnis lebt in `.planning/` — nicht im Chat.
+
+Vollständige Spezifikation: `docs/_rb/01_MISSION_PROMPT.md`
+
+---
+
 ## ⚡ QUICK-START (TL;DR)
 
 Für Eilige – die 5 Schritte in Kurzform:
@@ -454,4 +498,4 @@ Wenn dieses Export-Paket aktualisiert wird:
 
 ---
 
-**Version:** 3.1 | **Erstellt:** 2026-03-14 | **Aktualisiert:** 2026-03-17 (§5 Plan Execution Autonomy) | **Autor:** Antigravity Core
+**Version:** 3.2 | **Erstellt:** 2026-03-14 | **Aktualisiert:** 2026-04-02 (GSD-Phasen + vollständige docs/_rb) | **Autor:** Antigravity Core

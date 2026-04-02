@@ -13,8 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps first (layer cache)
+# chroma-hnswlib==0.7.5 ist ein Windows-Only-Fix (kein pre-built wheel für 0.7.3 auf Windows).
+# Auf Linux entfernen wir den Pin damit chromadb==0.5.0 seine eigene Version zieht.
+# numpy wird nach dem Install explizit gepinnt (torch/sentence-transformers würden sonst 2.x ziehen).
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
+RUN grep -v "^chroma-hnswlib" /app/requirements.txt > /tmp/requirements.linux.txt \
+    && pip install --no-cache-dir --prefer-binary -r /tmp/requirements.linux.txt \
+    && pip install --no-cache-dir "numpy==1.26.4"
 
 # Application source
 COPY src/       /app/src/
